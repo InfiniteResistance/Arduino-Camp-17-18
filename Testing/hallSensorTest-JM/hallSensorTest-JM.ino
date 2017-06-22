@@ -10,7 +10,7 @@ void setup() {
 
 void loop() {
   hallSwitchState = digitalRead(hallPin);
-  if(hallSwitchState != 0){
+  if(hallSwitchState == 0){
     digitalWrite(ledPin, HIGH);  
   }else{
     digitalWrite(ledPin, LOW);  
