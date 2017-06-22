@@ -1,3 +1,5 @@
+#include <Adafruit_MotorShield.h>
+
 // SPECIAL VERSION FOR INTERFACING WITH ADAFRUIT MOTOR SHIELD v2 (albert palomas)
 //S4A           Adafruit Motor Shield
 //Analog 5  ->  Speed DC Motor 1
