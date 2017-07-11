@@ -63,6 +63,8 @@ float r, g, b;
 Adafruit_MotorShield AFMS = Adafruit_MotorShield(); 
 Adafruit_DCMotor *leftMotors = AFMS.getMotor(1);
 Adafruit_DCMotor *rightMotors = AFMS.getMotor(2);
+Servo myservo;
+const int servoPin = 9;
 
 /* analog inputs */
 int analogInputsToReport = 0; // bitwise array to store pin reporting
@@ -487,6 +489,9 @@ void reportDigitalCallback(byte port, int value)
 /*==============================================================================
  * SYSEX-BASED commands
  *============================================================================*/
+void moveServo(int pos){
+  myservo.write(pos);
+}
 
 void drive(bool side, bool dir, int spd) {
   if (side == 1) {
@@ -546,6 +551,9 @@ void sysexCallback(byte command, byte argc, byte *argv)
   unsigned int delayTime;
 
   switch (command) {
+    case 0x0D:
+      moveServo(argv[0]);
+      break;
     case 0x09:
       drive(argv[0], argv[1], argv[2]);
       break;
@@ -829,6 +837,8 @@ void systemResetCallback()
 
 void setup()
 {
+  myservo.attach(servoPin);
+  
   AFMS.begin();
   leftMotors->setSpeed(150);
   leftMotors->run(FORWARD);
