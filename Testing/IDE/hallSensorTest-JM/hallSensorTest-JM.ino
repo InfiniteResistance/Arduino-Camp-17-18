@@ -1,4 +1,4 @@
-const int hallPin = 3;
+const int hallPin = 2;
 const int ledPin = 13;
 
 int hallSwitchState = 0;

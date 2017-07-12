@@ -66,6 +66,7 @@ Adafruit_DCMotor *rightMotors = AFMS.getMotor(2);
 Servo myservo;
 const int servoPin = 9;
 
+
 /* analog inputs */
 int analogInputsToReport = 0; // bitwise array to store pin reporting
 
@@ -491,24 +492,31 @@ void reportDigitalCallback(byte port, int value)
  *============================================================================*/
 void moveServo(int pos){
   myservo.write(pos);
+  delay(15);
 }
 
-void drive(bool side, bool dir, int spd) {
-  if (side == 1) {
-      if (dir == 1) {
+void driveForwardOrBack(bool dir, int spd) {
+  if (dir == 1) {
         rightMotors->run(FORWARD);
-      } else {
+        leftMotors->run(FORWARD);
+  } else {
         rightMotors->run(BACKWARD);  
+        leftMotors->run(BACKWARD); 
       }
     rightMotors->setSpeed(spd);
-  } else {
-    if (dir == 1) {
-        leftMotors->run(FORWARD);
-      } else {
-        leftMotors->run(BACKWARD);  
-      }
     leftMotors->setSpeed(spd);
-  }
+}
+
+void turn(bool side, int spd){
+    if (side == 1) {
+      rightMotors->run(BACKWARD);
+      leftMotors->run(FORWARD);
+    } else {
+      rightMotors->run(FORWARD);  
+      leftMotors->run(BACKWARD); 
+    }
+    rightMotors->setSpeed(spd);
+    leftMotors->setSpeed(spd);
 }
 
 String color()
@@ -541,6 +549,8 @@ String color()
 }
 
 
+
+
 void sysexCallback(byte command, byte argc, byte *argv)
 {
   byte mode;
@@ -551,11 +561,15 @@ void sysexCallback(byte command, byte argc, byte *argv)
   unsigned int delayTime;
 
   switch (command) {
+   
     case 0x0D:
       moveServo(argv[0]);
       break;
+    case 0x0E:
+      turn(argv[0], argv[1]);
+      break;
     case 0x09:
-      drive(argv[0], argv[1], argv[2]);
+      driveForwardOrBack(argv[0], argv[1]);
       break;
     case 0x0C:
       Serial.write(START_SYSEX);
@@ -838,7 +852,7 @@ void systemResetCallback()
 void setup()
 {
   myservo.attach(servoPin);
-  
+ 
   AFMS.begin();
   leftMotors->setSpeed(150);
   leftMotors->run(FORWARD);
@@ -876,7 +890,6 @@ void setup()
     x = pow(x, 2.5);
     x *= 255;
   }
-
   Firmata.begin(57600);
   //Serial.begin(9600);
   while (!Serial) {
