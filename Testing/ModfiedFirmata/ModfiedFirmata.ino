@@ -29,6 +29,7 @@
 #include <Adafruit_TCS34725.h>
 #include <Adafruit_MotorShield.h>
 #include "utility/Adafruit_MS_PWMServoDriver.h"
+#include <NewPing.h>
 
 #define I2C_WRITE                   B00000000
 #define I2C_READ                    B00001000
@@ -65,6 +66,13 @@ Adafruit_DCMotor *leftMotors = AFMS.getMotor(1);
 Adafruit_DCMotor *rightMotors = AFMS.getMotor(2);
 Servo myservo;
 const int servoPin = 9;
+
+#define TRIGGER_PIN  12  // Arduino pin tied to trigger pin on the ultrasonic sensor.
+#define ECHO_PIN     11  // Arduino pin tied to echo pin on the ultrasonic sensor.
+#define MAX_DISTANCE 200 // Maximum distance we want to ping for (in centimeters). Maximum sensor distance is rated at 400-500cm.
+
+NewPing sonar(TRIGGER_PIN, ECHO_PIN, MAX_DISTANCE); // NewPing setup of pins and maximum distance.
+
 
 
 /* analog inputs */
@@ -490,6 +498,28 @@ void reportDigitalCallback(byte port, int value)
 /*==============================================================================
  * SYSEX-BASED commands
  *============================================================================*/
+int findDistance() {
+  return (sonar.ping_cm()* 0.393701);
+  }
+void swingTurn(boolean side, int power, int msec) {
+
+  if (side) {
+  rightMotors->run(FORWARD);
+  leftMotors->run(BACKWARD);
+    rightMotors->setSpeed(power);
+    leftMotors->setSpeed(power/4);
+    } else {
+    rightMotors->run(BACKWARD);
+    leftMotors->run(FORWARD);
+    rightMotors->setSpeed(power/4);
+    leftMotors->setSpeed(power);
+    }
+
+  delay(msec);
+  rightMotors->setSpeed(0);
+  leftMotors->setSpeed(0);
+}
+ 
 void moveServo(int pos){
   myservo.write(pos);
   delay(15);
@@ -508,7 +538,7 @@ void driveForwardOrBack(bool dir, int spd) {
 }
 
 void turn(bool side, int spd){
-    if (side == 1) {
+    if (side == 0) {
       rightMotors->run(BACKWARD);
       leftMotors->run(FORWARD);
     } else {
@@ -561,7 +591,9 @@ void sysexCallback(byte command, byte argc, byte *argv)
   unsigned int delayTime;
 
   switch (command) {
-   
+    case 0x0F:
+      swingTurn(argv[0], argv[1], argv[2]);
+      break;
     case 0x0D:
       moveServo(argv[0]);
       break;
@@ -578,7 +610,10 @@ void sysexCallback(byte command, byte argc, byte *argv)
       Serial.write(END_SYSEX);
       break;
     case 0x0A:
-      digitalWrite(argv[0],HIGH);
+      Serial.write(START_SYSEX);
+      Serial.write(STRING_DATA);
+      Serial.println(findDistance());
+      Serial.write(END_SYSEX);
       break;
     case 0x0B:
       digitalWrite(argv[0],LOW);
@@ -821,13 +856,17 @@ void systemResetCallback()
   for (byte i = 0; i < TOTAL_PINS; i++) {
     // pins with analog capability default to analog input
     // otherwise, pins default to digital output
-    if (IS_PIN_ANALOG(i)) {
+    if (i == 11 || i == 12) {
+      
+    }
+    else if (IS_PIN_ANALOG(i)) {
       // turns off pullup, configures everything
       setPinModeCallback(i, PIN_MODE_ANALOG);
     } else if (IS_PIN_DIGITAL(i)) {
       // sets the output to 0, configures portConfigInputs
       setPinModeCallback(i, OUTPUT);
     }
+    
 
     servoPinMap[i] = 255;
   }
@@ -852,6 +891,7 @@ void systemResetCallback()
 void setup()
 {
   myservo.attach(servoPin);
+  myservo.write(50);
  
   AFMS.begin();
   leftMotors->setSpeed(150);
